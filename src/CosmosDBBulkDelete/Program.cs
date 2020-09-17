@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 
 namespace CosmosDBBulkDelete
 {
@@ -6,7 +7,14 @@ namespace CosmosDBBulkDelete
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Cosmos DB Bulk Delete");
+            var builder = new ConfigurationBuilder()
+                .AddUserSecrets<Program>()
+                .AddJsonFile("appsettings.json");
+
+            var configuration = builder.Build();
+            
+            var connectionString = configuration.GetValue<string>("ConnectionString");
         }
     }
 }
