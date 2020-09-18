@@ -28,6 +28,7 @@ namespace CosmosDBBulkDelete
 
         private async Task InitializeAsync()
         {
+            Console.WriteLine($"Creating database {DatabaseName}...");
             _database = await _client.CreateDatabaseIfNotExistsAsync(DatabaseName, ThroughputProperties.CreateManualThroughput(400));
 
             _devicesContainer = await _database.DefineContainer(DevicesContainer, "/id")
@@ -42,7 +43,7 @@ namespace CosmosDBBulkDelete
                     .Attach()
                 .CreateIfNotExistsAsync();
 
-            _deviceLocationsContainer = await _database.DefineContainer(DeviceLocationsContainer, "/id")
+            _deviceLocationsContainer = await _database.DefineContainer(DeviceLocationsContainer, "/deviceId")
                     .WithDefaultTimeToLive(TimeSpan.FromDays(7))
                     .WithIndexingPolicy()
                         .WithIndexingMode(IndexingMode.Consistent)

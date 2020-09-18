@@ -7,8 +7,8 @@ namespace CosmosDBBulkDelete.Interfaces
         [JsonPropertyName("id")]
         public string ID { get; set; }
 
-        [JsonPropertyName("device")]
-        public string Device { get; set; }
+        [JsonPropertyName("deviceId")]
+        public string DeviceID { get; set; }
 
         [JsonPropertyName("location")]
         public Location Location { get; set; }
