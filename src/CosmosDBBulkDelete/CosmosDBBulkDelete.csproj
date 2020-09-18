@@ -20,6 +20,9 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="bulkCleanUp.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="bulkImport.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
