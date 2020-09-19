@@ -74,12 +74,14 @@ namespace CosmosDBBulkDelete
 
         private async Task GenerateDataAsync()
         {
-            var collection = Enumerable.Range(1, 1000);
+            var random = new Random();
+            var collection = Enumerable.Range(1, 10);
             var tasks = new List<Task>();
             foreach (var item in collection)
             {
                 var id = item.ToString();
-                var task = _devicesContainer.CreateItemAsync(new Device()
+                var partitionKey = new PartitionKey(id);
+                var deviceTask = _devicesContainer.CreateItemAsync(new Device()
                 {
                     ID = id,
                     Name = $"Device {item}",
@@ -89,12 +91,28 @@ namespace CosmosDBBulkDelete
                         Longitude = 44,
                         Timestamp = DateTimeOffset.UtcNow
                     }
-                }, new PartitionKey(id));
+                });
 
-                tasks.Add(task);
+                var deviceLocation = new DeviceLocation()
+                {
+                    DeviceID = id,
+                    Location = new Location()
+                    {
+                        Latitude = 56,
+                        Longitude = 45,
+                        Timestamp = DateTimeOffset.UtcNow
+                    }
+                };
+
+                var deviceLocationTask = _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, 10 });
+                tasks.Add(deviceTask);
+                tasks.Add(deviceLocationTask);
+                Console.Write("+");
             }
 
+            Console.Write("[*]");
             Task.WaitAll(tasks.ToArray());
+            Console.WriteLine("Done!");
 
             await Task.CompletedTask;
         }
