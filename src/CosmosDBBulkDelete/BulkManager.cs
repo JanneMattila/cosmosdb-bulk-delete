@@ -1,8 +1,11 @@
-﻿using CosmosDBBulkDelete.Interfaces;
+﻿// Parts taken from
+// https://github.com/Azure/azure-cosmos-dotnet-v3/blob/master/Microsoft.Azure.Cosmos.Samples/Usage/BulkExecutorMigration/Program.cs
+using CosmosDBBulkDelete.Interfaces;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Scripts;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -77,6 +80,8 @@ namespace CosmosDBBulkDelete
             var random = new Random();
             var collection = Enumerable.Range(1, 10);
             var tasks = new List<Task>();
+
+            var stopwatch = Stopwatch.StartNew();
             foreach (var item in collection)
             {
                 var id = item.ToString();
@@ -104,7 +109,7 @@ namespace CosmosDBBulkDelete
                     }
                 };
 
-                var deviceLocationTask = _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, 10 });
+                var deviceLocationTask = _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, random.Next(1200, 2500) });
                 tasks.Add(deviceTask);
                 tasks.Add(deviceLocationTask);
                 Console.Write("+");
@@ -112,7 +117,11 @@ namespace CosmosDBBulkDelete
 
             Console.Write("[*]");
             Task.WaitAll(tasks.ToArray());
-            Console.WriteLine("Done!");
+            stopwatch.Stop();
+
+            Console.WriteLine($"Done! It took: {stopwatch.Elapsed}.");
+            Console.WriteLine($"Succeeded: {tasks.Count(t => t.IsCompletedSuccessfully)}");
+            Console.WriteLine($"Failed: {tasks.Count(t => !t.IsCompletedSuccessfully)}");
 
             await Task.CompletedTask;
         }
