@@ -1,16 +1,16 @@
-﻿using System.Text.Json.Serialization;
+﻿using Newtonsoft.Json;
 
 namespace CosmosDBBulkDelete.Interfaces
 {
     public class Device
     {
-        [JsonPropertyName("id")]
+        [JsonProperty(PropertyName = "id")]
         public string ID { get; set; }
 
-        [JsonPropertyName("name")]
+        [JsonProperty(PropertyName = "name")]
         public string Name { get; set; }
 
-        [JsonPropertyName("current")]
+        [JsonProperty(PropertyName = "current")]
         public Location Current { get; set; }
     }
 }

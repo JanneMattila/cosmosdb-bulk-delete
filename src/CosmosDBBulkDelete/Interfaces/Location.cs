@@ -1,17 +1,17 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace CosmosDBBulkDelete.Interfaces
 {
     public class Location
     {
-        [JsonPropertyName("lat")]
+        [JsonProperty(PropertyName = "lat")]
         public double Latitude { get; set; }
 
-        [JsonPropertyName("lon")]
+        [JsonProperty(PropertyName = "lon")]
         public double Longitude { get; set; }
 
-        [JsonPropertyName("timestamp")]
+        [JsonProperty(PropertyName = "timestamp")]
         public DateTimeOffset Timestamp { get; set; }
     }
 }

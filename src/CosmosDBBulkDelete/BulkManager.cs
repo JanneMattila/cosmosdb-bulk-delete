@@ -1,7 +1,10 @@
-﻿using Microsoft.Azure.Cosmos;
+﻿using CosmosDBBulkDelete.Interfaces;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Scripts;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -30,6 +33,8 @@ namespace CosmosDBBulkDelete
         public async Task ExecuteAsync()
         {
             await InitializeAsync();
+
+            await GenerateDataAsync();
         }
 
         private async Task InitializeAsync()
@@ -65,6 +70,33 @@ namespace CosmosDBBulkDelete
 
             await CreateStoredProcedure(BulkImport);
             await CreateStoredProcedure(BulkCleanUp);
+        }
+
+        private async Task GenerateDataAsync()
+        {
+            var collection = Enumerable.Range(1, 1000);
+            var tasks = new List<Task>();
+            foreach (var item in collection)
+            {
+                var id = item.ToString();
+                var task = _devicesContainer.CreateItemAsync(new Device()
+                {
+                    ID = id,
+                    Name = $"Device {item}",
+                    Current = new Location()
+                    {
+                        Latitude = 55,
+                        Longitude = 44,
+                        Timestamp = DateTimeOffset.UtcNow
+                    }
+                }, new PartitionKey(id));
+
+                tasks.Add(task);
+            }
+
+            Task.WaitAll(tasks.ToArray());
+
+            await Task.CompletedTask;
         }
 
         private async Task CreateStoredProcedure(string name)
