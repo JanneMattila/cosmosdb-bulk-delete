@@ -157,8 +157,7 @@ namespace CosmosDBBulkDelete
                     }
                 };
 
-                var deviceLocationTask = _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, random.Next(1200, 2500) });
-                tasks.Add(deviceLocationTask);
+                await _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, random.Next(1200, 2500) });
                 Console.Write("+");
             }
 
