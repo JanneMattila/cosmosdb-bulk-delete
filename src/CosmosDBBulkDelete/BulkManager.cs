@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace CosmosDBBulkDelete
@@ -78,10 +79,12 @@ namespace CosmosDBBulkDelete
         private async Task GenerateDataAsync()
         {
             var random = new Random();
-            var collection = Enumerable.Range(1, 10);
+            var collection = Enumerable.Range(1, 1_000_000);
             var tasks = new List<Task>();
 
             var stopwatch = Stopwatch.StartNew();
+            // Option 1:
+            /*
             foreach (var item in collection)
             {
                 var id = item.ToString();
@@ -98,6 +101,51 @@ namespace CosmosDBBulkDelete
                     }
                 });
 
+                tasks.Add(deviceTask);
+                Console.Write("+");
+            }
+            */
+
+            // Option 2:
+            foreach (var item in collection)
+            {
+                var id = item.ToString();
+                var partitionKey = new PartitionKey(id);
+                var device = new Device()
+                {
+                    ID = id,
+                    Name = $"Device {item}",
+                    Current = new Location()
+                    {
+                        Latitude = 55,
+                        Longitude = 44,
+                        Timestamp = DateTimeOffset.UtcNow
+                    }
+                };
+                var stream = new MemoryStream();
+                await JsonSerializer.SerializeAsync(stream, device);
+                tasks.Add(_devicesContainer.CreateItemStreamAsync(stream, partitionKey));
+
+                if (tasks.Count() > 1000)
+                {
+                    Console.Write("+");
+                    await Task.WhenAll(tasks);
+                    tasks.Clear();
+                }
+            }
+
+            Console.WriteLine("*");
+            await Task.WhenAll(tasks);
+            stopwatch.Stop();
+
+            Console.WriteLine($"Device import took: {stopwatch.Elapsed}.");
+
+            stopwatch.Restart();
+            foreach (var item in collection)
+            {
+                var id = item.ToString();
+                var partitionKey = new PartitionKey(id);
+
                 var deviceLocation = new DeviceLocation()
                 {
                     DeviceID = id,
@@ -110,20 +158,12 @@ namespace CosmosDBBulkDelete
                 };
 
                 var deviceLocationTask = _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, random.Next(1200, 2500) });
-                tasks.Add(deviceTask);
                 tasks.Add(deviceLocationTask);
                 Console.Write("+");
             }
 
-            Console.Write("[*]");
-            Task.WaitAll(tasks.ToArray());
             stopwatch.Stop();
-
-            Console.WriteLine($"Done! It took: {stopwatch.Elapsed}.");
-            Console.WriteLine($"Succeeded: {tasks.Count(t => t.IsCompletedSuccessfully)}");
-            Console.WriteLine($"Failed: {tasks.Count(t => !t.IsCompletedSuccessfully)}");
-
-            await Task.CompletedTask;
+            Console.WriteLine($"Device location import took: {stopwatch.Elapsed}.");
         }
 
         private async Task CreateStoredProcedure(string name)
