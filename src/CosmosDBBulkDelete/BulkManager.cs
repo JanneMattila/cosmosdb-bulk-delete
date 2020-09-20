@@ -165,6 +165,53 @@ namespace CosmosDBBulkDelete
             Console.WriteLine($"Device location import took: {stopwatch.Elapsed}.");
         }
 
+        private async Task DeleteDataAsync()
+        {
+            var collection = Enumerable.Range(100_000, 200_000);
+            var tasks = new List<Task>();
+
+            var stopwatch = Stopwatch.StartNew();
+            foreach (var item in collection)
+            {
+                var id = item.ToString();
+                var partitionKey = new PartitionKey(id);
+                tasks.Add(_devicesContainer.DeleteItemStreamAsync(id, partitionKey));
+
+                if (tasks.Count() > 1000)
+                {
+                    Console.Write("-");
+                    await Task.WhenAll(tasks);
+                    tasks.Clear();
+                }
+            }
+
+            Console.WriteLine("*");
+            await Task.WhenAll(tasks);
+            stopwatch.Stop();
+
+            Console.WriteLine($"Device delete took: {stopwatch.Elapsed}.");
+
+            stopwatch.Restart();
+            foreach (var item in collection)
+            {
+                var id = item.ToString();
+                var partitionKey = new PartitionKey(id);
+
+                while (true)
+                {
+                    Console.Write("-");
+                    var result = await _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<BulkResponse>(BulkCleanUp, partitionKey, new dynamic[] { 1000 });
+                    if (!result.Resource.Continuation)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            stopwatch.Stop();
+            Console.WriteLine($"Device location delete took: {stopwatch.Elapsed}.");
+        }
+
         private async Task CreateStoredProcedure(string name)
         {
             Console.WriteLine($"Creating stored procedure {name}...");
