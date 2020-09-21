@@ -29,6 +29,10 @@ namespace CosmosDBBulkDelete
         private const string BulkImport = "bulkImport";
         private const string BulkCleanUp = "bulkCleanUp";
 
+        private const int _from = 1;
+        private const int _to = 100_001;
+        private const int _batch = 20_000;
+
         public BulkManager(string connectionString)
         {
             _client = new CosmosClient(connectionString, new CosmosClientOptions() { AllowBulkExecution = true });
@@ -36,15 +40,23 @@ namespace CosmosDBBulkDelete
 
         public async Task ExecuteAsync()
         {
-            await InitializeAsync();
+            var requestUnitsScenarios = new int[] { 25_000, 50_000, 100_000 };
+            foreach (var requestUnits in requestUnitsScenarios)
+            {
+                Console.WriteLine($"Executing test with {requestUnits} RUs. Tests create and delete items from {_from} to {_to}:");
+                await PreTestAsync(requestUnits);
 
-            await GenerateDataAsync();
+                await GenerateDataAsync();
+                await DeleteDataAsync();
+
+                await PostTestAsync();
+            }
         }
 
-        private async Task InitializeAsync()
+        private async Task PreTestAsync(int requestUnits)
         {
             Console.WriteLine($"Creating database {DatabaseName}...");
-            _database = await _client.CreateDatabaseIfNotExistsAsync(DatabaseName, ThroughputProperties.CreateManualThroughput(400));
+            _database = await _client.CreateDatabaseIfNotExistsAsync(DatabaseName, ThroughputProperties.CreateManualThroughput(requestUnits));
 
             Console.WriteLine($"Creating container {DevicesContainer}...");
             _devicesContainer = await _database.DefineContainer(DevicesContainer, "/id")
@@ -76,37 +88,18 @@ namespace CosmosDBBulkDelete
             await CreateStoredProcedure(BulkCleanUp);
         }
 
+        private async Task PostTestAsync()
+        {
+            await _database.DeleteAsync();
+        }
+
         private async Task GenerateDataAsync()
         {
             var random = new Random();
-            var collection = Enumerable.Range(1, 1_000_000);
+            var collection = Enumerable.Range(_from, _to);
             var tasks = new List<Task>();
 
             var stopwatch = Stopwatch.StartNew();
-            // Option 1:
-            /*
-            foreach (var item in collection)
-            {
-                var id = item.ToString();
-                var partitionKey = new PartitionKey(id);
-                var deviceTask = _devicesContainer.CreateItemAsync(new Device()
-                {
-                    ID = id,
-                    Name = $"Device {item}",
-                    Current = new Location()
-                    {
-                        Latitude = 55,
-                        Longitude = 44,
-                        Timestamp = DateTimeOffset.UtcNow
-                    }
-                });
-
-                tasks.Add(deviceTask);
-                Console.Write("+");
-            }
-            */
-
-            // Option 2:
             foreach (var item in collection)
             {
                 var id = item.ToString();
@@ -126,7 +119,7 @@ namespace CosmosDBBulkDelete
                 await JsonSerializer.SerializeAsync(stream, device);
                 tasks.Add(_devicesContainer.CreateItemStreamAsync(stream, partitionKey));
 
-                if (tasks.Count() > 1000)
+                if (tasks.Count() > _batch)
                 {
                     Console.Write("+");
                     await Task.WhenAll(tasks);
@@ -138,36 +131,36 @@ namespace CosmosDBBulkDelete
             await Task.WhenAll(tasks);
             stopwatch.Stop();
 
-            Console.WriteLine($"Device import took: {stopwatch.Elapsed}.");
+            Console.WriteLine($"Device import took: {stopwatch.Elapsed}. Documents/s: {(_to - _from) * 1000 / stopwatch.ElapsedMilliseconds}");
 
-            stopwatch.Restart();
-            foreach (var item in collection)
-            {
-                var id = item.ToString();
-                var partitionKey = new PartitionKey(id);
+            //stopwatch.Restart();
+            //foreach (var item in collection)
+            //{
+            //    var id = item.ToString();
+            //    var partitionKey = new PartitionKey(id);
 
-                var deviceLocation = new DeviceLocation()
-                {
-                    DeviceID = id,
-                    Location = new Location()
-                    {
-                        Latitude = 56,
-                        Longitude = 45,
-                        Timestamp = DateTimeOffset.UtcNow
-                    }
-                };
+            //    var deviceLocation = new DeviceLocation()
+            //    {
+            //        DeviceID = id,
+            //        Location = new Location()
+            //        {
+            //            Latitude = 56,
+            //            Longitude = 45,
+            //            Timestamp = DateTimeOffset.UtcNow
+            //        }
+            //    };
 
-                await _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, random.Next(1200, 2500) });
-                Console.Write("+");
-            }
+            //    await _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<string>(BulkImport, partitionKey, new dynamic[] { deviceLocation, random.Next(1200, 2500) });
+            //    Console.Write("+");
+            //}
 
-            stopwatch.Stop();
-            Console.WriteLine($"Device location import took: {stopwatch.Elapsed}.");
+            //stopwatch.Stop();
+            //Console.WriteLine($"Device location import took: {stopwatch.Elapsed}.");
         }
 
         private async Task DeleteDataAsync()
         {
-            var collection = Enumerable.Range(100_000, 200_000);
+            var collection = Enumerable.Range(_from, _to);
             var tasks = new List<Task>();
 
             var stopwatch = Stopwatch.StartNew();
@@ -177,7 +170,7 @@ namespace CosmosDBBulkDelete
                 var partitionKey = new PartitionKey(id);
                 tasks.Add(_devicesContainer.DeleteItemStreamAsync(id, partitionKey));
 
-                if (tasks.Count() > 1000)
+                if (tasks.Count() > _batch)
                 {
                     Console.Write("-");
                     await Task.WhenAll(tasks);
@@ -189,27 +182,27 @@ namespace CosmosDBBulkDelete
             await Task.WhenAll(tasks);
             stopwatch.Stop();
 
-            Console.WriteLine($"Device delete took: {stopwatch.Elapsed}.");
+            Console.WriteLine($"Device delete took: {stopwatch.Elapsed}. Documents/s: {(_to - _from) * 1000 / stopwatch.ElapsedMilliseconds}.");
 
-            stopwatch.Restart();
-            foreach (var item in collection)
-            {
-                var id = item.ToString();
-                var partitionKey = new PartitionKey(id);
+            //stopwatch.Restart();
+            //foreach (var item in collection)
+            //{
+            //    var id = item.ToString();
+            //    var partitionKey = new PartitionKey(id);
 
-                while (true)
-                {
-                    Console.Write("-");
-                    var result = await _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<BulkResponse>(BulkCleanUp, partitionKey, new dynamic[] { 1000 });
-                    if (!result.Resource.Continuation)
-                    {
-                        break;
-                    }
-                }
-            }
+            //    while (true)
+            //    {
+            //        Console.Write("-");
+            //        var result = await _deviceLocationsContainer.Scripts.ExecuteStoredProcedureAsync<BulkResponse>(BulkCleanUp, partitionKey, new dynamic[] { 1000 });
+            //        if (!result.Resource.Continuation)
+            //        {
+            //            break;
+            //        }
+            //    }
+            //}
 
-            stopwatch.Stop();
-            Console.WriteLine($"Device location delete took: {stopwatch.Elapsed}.");
+            //stopwatch.Stop();
+            //Console.WriteLine($"Device location delete took: {stopwatch.Elapsed}.");
         }
 
         private async Task CreateStoredProcedure(string name)
