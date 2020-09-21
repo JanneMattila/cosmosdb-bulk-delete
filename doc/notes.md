@@ -45,13 +45,39 @@ Connecting to 13.69.126.21:443: from 172.16.2.4:50773: 1.28ms
 Test scenario:
 
 - Write 100'000 documents
-- Delete 100'000 documents
-- Times in seconds
+- Partition key = Item id
+- Document size is small (< 1 KB)
 
-| RUs    | Write | Delete | Documents/second |
-|--------|-------|--------|------------------|
-| 5'000  |       |        |                  |
-| 10'000 |       |        |                  |
-| 20'000 |       |        |                  |
-| 30'000 |       |        |                  |
-| 50'000 |       |        |                  |
+**Note:** All times in seconds rounded up to closest second. 
+
+Simplified C# part:
+
+```csharp
+_client = new CosmosClient(connectionString, new CosmosClientOptions() { AllowBulkExecution = true });
+
+// Create new with 'id':
+var partitionKey = new PartitionKey(id);
+var device = new Device()
+{
+    ID = id,
+    Name = $"Device {item}",
+    Current = new Location()
+    // ...other fields
+};
+
+var stream = new MemoryStream();
+await JsonSerializer.SerializeAsync(stream, device);
+tasks.Add(_devicesContainer.CreateItemStreamAsync(stream, partitionKey));
+
+// Wait processing to finish
+await Task.WhenAll(tasks);
+```
+
+| RUs     | Time (seconds) | Documents/second |
+|---------|----------------|------------------|
+| 10'000  | 60             | 1'700            |
+| 25'000  | 28             | 3'600            |
+| 50'000  | 18             | 5'500            |
+| 100'000 | 9              | 11'000           |
+| 200'000 | 8              | 12'000           |
+| 400'000 | 5              | 20'000           |
