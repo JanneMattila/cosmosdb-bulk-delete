@@ -158,6 +158,29 @@ namespace CosmosDBBulkDelete
             //Console.WriteLine($"Device location import took: {stopwatch.Elapsed}.");
         }
 
+        private async Task QueryDataAsync()
+        {
+            var collection = Enumerable.Range(_from, _to);
+            var stopwatch = Stopwatch.StartNew();
+            foreach (var deviceId in collection)
+            {
+                using var queryIterator = _deviceLocationsContainer.GetItemQueryStreamIterator("SELECT c.id FROM c", null,
+                    new QueryRequestOptions()
+                    {
+                        PartitionKey = new PartitionKey(deviceId.ToString())
+                    });
+                while (queryIterator.HasMoreResults)
+                {
+                    using var response = await queryIterator.ReadNextAsync();
+                    var queryResponse = await JsonSerializer.DeserializeAsync<QueryResponse>(response.Content);
+                }
+            }
+
+            stopwatch.Stop();
+
+            Console.WriteLine($"Device locations query took: {stopwatch.Elapsed}. Documents/s: {(_to - _from) * 1000 / stopwatch.ElapsedMilliseconds}.");
+        }
+
         private async Task DeleteDataAsync()
         {
             var collection = Enumerable.Range(_from, _to);

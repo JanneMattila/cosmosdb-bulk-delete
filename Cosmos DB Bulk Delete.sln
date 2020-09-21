@@ -19,7 +19,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unit", "unit", "{7F48B88A-6
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "release", "release", "{EC9C2024-7F3E-4C94-B592-9BC6A96AB14E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CosmosDBBulkDelete", "src\CosmosDBBulkDelete\CosmosDBBulkDelete.csproj", "{87D498CE-B18C-4731-B9E2-2B4060B31BC9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDBBulkDelete", "src\CosmosDBBulkDelete\CosmosDBBulkDelete.csproj", "{87D498CE-B18C-4731-B9E2-2B4060B31BC9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{6719366C-664E-4836-A5D2-2AEAF53BA775}"
+	ProjectSection(SolutionItems) = preProject
+		doc\notes.md = doc\notes.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +44,7 @@ Global
 		{7F48B88A-6EC7-4AA2-84C5-CAC112F80102} = {70D80D12-0F5B-4966-9543-5304131A9000}
 		{EC9C2024-7F3E-4C94-B592-9BC6A96AB14E} = {70D80D12-0F5B-4966-9543-5304131A9000}
 		{87D498CE-B18C-4731-B9E2-2B4060B31BC9} = {E74445DD-28F2-4920-961A-C3778DA73664}
+		{6719366C-664E-4836-A5D2-2AEAF53BA775} = {7B2AAD5E-368D-44EC-9215-418C718128CD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F99521D6-99C8-41D7-83DC-3D5523498EE7}
