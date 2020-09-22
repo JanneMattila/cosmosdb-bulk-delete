@@ -31,6 +31,7 @@ namespace CosmosDBBulkDelete
 
         private const int _from = 1;
         private const int _to = 100_001;
+        private const long _locationsPerDevice = 2_000;
         private const int _batch = 20_000;
 
         public BulkManager(string connectionString)
@@ -132,6 +133,43 @@ namespace CosmosDBBulkDelete
             stopwatch.Stop();
 
             Console.WriteLine($"Device import took: {stopwatch.Elapsed}. Documents/s: {(_to - _from) * 1000 / stopwatch.ElapsedMilliseconds}");
+
+            stopwatch.Restart();
+            foreach (var item in collection)
+            {
+                var id = item.ToString();
+                var partitionKey = new PartitionKey(id);
+
+                for (int i = 1; i < _locationsPerDevice + 1; i++)
+                {
+                    var deviceLocation = new DeviceLocation()
+                    {
+                        DeviceID = id,
+                        Location = new Location()
+                        {
+                            Latitude = 56,
+                            Longitude = 45,
+                            Timestamp = DateTimeOffset.UtcNow
+                        }
+                    };
+                    var stream = new MemoryStream();
+                    await JsonSerializer.SerializeAsync(stream, deviceLocation);
+                    tasks.Add(_deviceLocationsContainer.CreateItemStreamAsync(stream, partitionKey));
+                }
+
+                if (tasks.Count() > _batch)
+                {
+                    Console.Write("+");
+                    await Task.WhenAll(tasks);
+                    tasks.Clear();
+                }
+            }
+
+            Console.WriteLine("*");
+            await Task.WhenAll(tasks);
+            stopwatch.Stop();
+
+            Console.WriteLine($"Device location import took: {stopwatch.Elapsed}. Documents/s: {(_to - _from) * _locationsPerDevice * 1000 / stopwatch.ElapsedMilliseconds}");
 
             //stopwatch.Restart();
             //foreach (var item in collection)
