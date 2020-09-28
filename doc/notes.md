@@ -151,10 +151,11 @@ using var queryIterator = _deviceLocationsContainer.GetItemQueryStreamIterator("
     {
         PartitionKey = new PartitionKey(deviceId.ToString())
     });
-while (queryIterator2.HasMoreResults)
+while (queryIterator.HasMoreResults)
 {
     using var response = await queryIterator.ReadNextAsync();
     var queryResponse = await JsonSerializer.DeserializeAsync<QueryResponse>(response.Content);
+    // Store identifier for later clean up purposes.
 }
 ```
 
