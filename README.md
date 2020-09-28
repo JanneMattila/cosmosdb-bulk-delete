@@ -1,5 +1,8 @@
 # Cosmos DB Bulk Delete
 
+Repository contains example how to test performance of different
+bulk delete scenarios.
+
 ## Links
 
 [Introducing Bulk support in the .NET SDK](https://devblogs.microsoft.com/cosmosdb/introducing-bulk-support-in-the-net-sdk/)
