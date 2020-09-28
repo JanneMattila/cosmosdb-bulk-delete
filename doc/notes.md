@@ -42,13 +42,18 @@ Connecting to 13.69.126.21:443: from 172.16.2.4:50773: 1.28ms
   Minimum = 1.21ms, Maximum = 1.46ms, Average = 1.31ms
 ```
 
-Test scenario:
+## Test scenarios
+
+**Note:** All times in seconds are rounded up to the closest second.
+Similarly, `documents/seconds` is rounded to the closest hundred or thousand.
+
+### Write
+
+In this test scenario you want to write documents as fast as possible to the Cosmos DB.
 
 - Write 100'000 documents
 - Partition key = Item id
 - Document size is small (< 1 KB)
-
-**Note:** All times in seconds rounded up to closest second. 
 
 Simplified C# part:
 
@@ -73,6 +78,8 @@ tasks.Add(_devicesContainer.CreateItemStreamAsync(stream, partitionKey));
 await Task.WhenAll(tasks);
 ```
 
+Example run stats:
+
 | RUs     | Time (seconds) | Documents/second |
 |---------|----------------|------------------|
 | 10'000  | 60             | 1'700            |
@@ -81,3 +88,27 @@ await Task.WhenAll(tasks);
 | 100'000 | 9              | 11'000           |
 | 200'000 | 8              | 12'000           |
 | 400'000 | 5              | 20'000           |
+
+### Delete with id and  partition key
+
+In this test scenario you want to delete documents as fast as possible from the Cosmos DB
+*and* you know the items that you want to delete. 
+
+- Delete 100'000 documents
+- Partition key = Item id
+- Document size is small (< 1 KB)
+
+Simplified C# part:
+
+```csharp
+_client = new CosmosClient(connectionString, new CosmosClientOptions() { AllowBulkExecution = true });
+
+// Delete item with 'id':
+var partitionKey = new PartitionKey(id);
+tasks.Add(_devicesContainer.DeleteItemStreamAsync(id, partitionKey));
+
+// Wait processing to finish
+await Task.WhenAll(tasks);
+```
+
+Performance between this scenario and previous one are in the same ballpark figures.
