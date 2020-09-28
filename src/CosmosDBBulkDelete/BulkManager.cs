@@ -131,6 +131,7 @@ namespace CosmosDBBulkDelete
             Console.WriteLine("*");
             await Task.WhenAll(tasks);
             stopwatch.Stop();
+            tasks.Clear();
 
             Console.WriteLine($"Device import took: {stopwatch.Elapsed}. Documents/s: {(_to - _from) * 1000 / stopwatch.ElapsedMilliseconds}");
 
@@ -202,14 +203,31 @@ namespace CosmosDBBulkDelete
             var stopwatch = Stopwatch.StartNew();
             foreach (var deviceId in collection)
             {
-                using var queryIterator = _deviceLocationsContainer.GetItemQueryStreamIterator("SELECT c.id FROM c", null,
+                // Option 1:
+                using var queryIterator1 = _deviceLocationsContainer.GetItemQueryIterator<QueryResponseID>("SELECT c.id FROM c", null,
                     new QueryRequestOptions()
                     {
                         PartitionKey = new PartitionKey(deviceId.ToString())
                     });
-                while (queryIterator.HasMoreResults)
+
+                while (queryIterator1.HasMoreResults)
                 {
-                    using var response = await queryIterator.ReadNextAsync();
+                    var response = await queryIterator1.ReadNextAsync();
+                    foreach (var item in response)
+                    {
+                        // Store identifier for later clean up purposes.
+                    }
+                }
+
+                // Option 2:
+                using var queryIterator2 = _deviceLocationsContainer.GetItemQueryStreamIterator("SELECT c.id FROM c", null,
+                    new QueryRequestOptions()
+                    {
+                        PartitionKey = new PartitionKey(deviceId.ToString())
+                    });
+                while (queryIterator2.HasMoreResults)
+                {
+                    using var response = await queryIterator2.ReadNextAsync();
                     var queryResponse = await JsonSerializer.DeserializeAsync<QueryResponse>(response.Content);
                 }
             }
